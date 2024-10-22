@@ -1,3 +1,7 @@
+// Jacob Duba
+// Added a v int that is set to 0, increments every time the buffer
+// goes over a vowel, prints out according to spec.
+
 #include "kernel/types.h"
 #include "kernel/stat.h"
 #include "kernel/fcntl.h"
@@ -5,46 +9,57 @@
 
 char buf[512];
 
-void
-wc(int fd, char *name)
+void wc(int fd, char *name)
 {
   int i, n;
-  int l, w, c, inword;
+  int l, w, c, v, inword;
 
-  l = w = c = 0;
+  l = w = c = v = 0;
   inword = 0;
-  while((n = read(fd, buf, sizeof(buf))) > 0){
-    for(i=0; i<n; i++){
+  while ((n = read(fd, buf, sizeof(buf))) > 0)
+  {
+    for (i = 0; i < n; i++)
+    {
       c++;
-      if(buf[i] == '\n')
+      if (buf[i] == '\n')
         l++;
-      if(strchr(" \r\t\n\v", buf[i]))
+      if (buf[i] == 'a' || buf[i] == 'A' ||
+          buf[i] == 'e' || buf[i] == 'E' ||
+          buf[i] == 'i' || buf[i] == 'I' ||
+          buf[i] == 'o' || buf[i] == 'O' ||
+          buf[i] == 'u' || buf[i] == 'U')
+        v++;
+      if (strchr(" \r\t\n\v", buf[i]))
         inword = 0;
-      else if(!inword){
+      else if (!inword)
+      {
         w++;
         inword = 1;
       }
     }
   }
-  if(n < 0){
+  if (n < 0)
+  {
     printf("wc: read error\n");
     exit(1);
   }
-  printf("%d %d %d %s\n", l, w, c, name);
+  printf("%d %d %d %d %s\n", l, w, c, v, name);
 }
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
   int fd, i;
 
-  if(argc <= 1){
+  if (argc <= 1)
+  {
     wc(0, "");
     exit(0);
   }
 
-  for(i = 1; i < argc; i++){
-    if((fd = open(argv[i], O_RDONLY)) < 0){
+  for (i = 1; i < argc; i++)
+  {
+    if ((fd = open(argv[i], O_RDONLY)) < 0)
+    {
       printf("wc: cannot open %s\n", argv[i]);
       exit(1);
     }
