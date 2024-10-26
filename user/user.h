@@ -22,6 +22,8 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+int getruntime(int pid);
+int stride(int pid, int stride);
 
 // ulib.c
 int stat(const char*, struct stat*);

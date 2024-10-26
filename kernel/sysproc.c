@@ -91,3 +91,24 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+// sys_stride(int num)
+uint64
+sys_stride(void) {
+    int pid, stride_val;
+
+    argint(0, &pid);
+    argint(1, &stride_val);
+
+    return stride(pid, stride_val);
+}
+
+// sys_getruntime()
+uint64
+sys_getruntime(void) {
+    int pid;
+
+    argint(0, &pid);
+
+    return getruntime(pid);
+}
