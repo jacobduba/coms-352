@@ -28,10 +28,19 @@ extern char trampoline[]; // trampoline.S
 // must be acquired before any p->lock.
 struct spinlock wait_lock;
 
-void make_runnable(struct proc *p) {
+// Null time interrupt pointer
+struct proc *timer_interrupt_proc = 0;
+
+void set_runnable(struct proc *p) {
   p->state = RUNNABLE;
-  uint64 pindex = p - proc;
-  enqueue(pindex);
+  // printf("%d", p->runtime);
+  if (SCHEDULER == 2) {
+      uint64 pindex = p - proc;
+      // printf("enqueue");
+      enqueue(pindex);
+      // reset timer interrupt proc
+      timer_interrupt_proc = 0;
+  }
 }
 
 // Allocate a page for each process's kernel stack.
@@ -147,6 +156,8 @@ found:
 // including user pages.
 // p->lock must be held.
 static void freeproc(struct proc *p) {
+    printf("%d freed\n", p->pid);
+
   if (p->trapframe)
     kfree((void *)p->trapframe);
   p->trapframe = 0;
@@ -236,7 +247,7 @@ void userinit(void) {
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
 
-  make_runnable(p);
+  set_runnable(p);
 
   release(&p->lock);
 }
@@ -302,7 +313,7 @@ int fork(void) {
   release(&wait_lock);
 
   acquire(&np->lock);
-  make_runnable(np);
+  set_runnable(np);
   release(&np->lock);
 
   return pid;
@@ -438,7 +449,7 @@ void scheduler(void) {
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
-        printf("%d\n", p->pid);
+        // printf("%d\n", p->pid);
         swtch(&c->context, &p->context);
 
         // Process is done running for now.
@@ -468,16 +479,20 @@ void scheduler_rr() {
     // processes are waiting.
     intr_on();
 
-    pindex = dequeue();
+    if (timer_interrupt_proc != 0 && timer_interrupt_proc->state != ZOMBIE) {
+        p = timer_interrupt_proc;
+    } else {
+        pindex = dequeue();
 
-    if (pindex < 0) {
-      // nothing to run; stop running on this core until an interrupt.
-      intr_on();
-      asm volatile("wfi");
-      continue;
+        if (pindex < 0) {
+          // nothing to run; stop running on this core until an interrupt.
+          intr_on();
+          asm volatile("wfi");
+          continue;
+        }
+
+        p = proc + pindex;
     }
-
-    p = proc + pindex;
 
     acquire(&p->lock);
 
@@ -530,7 +545,27 @@ void sched(void) {
 void yield(void) {
   struct proc *p = myproc();
   acquire(&p->lock);
-  make_runnable(p);
+
+  // Yield handles timer interrupts
+  // so, here is logic for timer interrupts
+  // which is different than any other interrupt
+
+  if (SCHEDULER == 1) {
+      set_runnable(p);
+  }
+
+  if (SCHEDULER == 2) {
+      if (timer_interrupt_proc != 0) {
+        // reset timer_interrupt_proc, add to queue
+        set_runnable(p);
+      } else {
+        // if hasn't ran a tick, exists
+        p->state = RUNNABLE;
+        timer_interrupt_proc = p;
+      }
+  }
+
+  printf("Proc %d yielded\n", p->pid);
   p->runtime++;
   sched();
   release(&p->lock);
@@ -596,7 +631,7 @@ void wakeup(void *chan) {
     if (p != myproc()) {
       acquire(&p->lock);
       if (p->state == SLEEPING && p->chan == chan) {
-        make_runnable(p);
+        set_runnable(p);
       }
       release(&p->lock);
     }
@@ -615,7 +650,7 @@ int kill(int pid) {
       p->killed = 1;
       if (p->state == SLEEPING) {
         // Wake process from sleep().
-        make_runnable(p);
+        set_runnable(p);
       }
       release(&p->lock);
       return 0;

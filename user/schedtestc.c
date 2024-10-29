@@ -3,7 +3,7 @@
 #include "kernel/proc_queue.h"
 #include "user/user.h"
 
-#define CPU_RUNS 0x70000000
+#define CPU_RUNS 2147483647
 #define IO_RUNS 10
 #define STRIDE_NUM_1 4
 #define STRIDE_NUM_2 12
@@ -36,7 +36,8 @@ void cpu_bound_test() {
 
   printf("Test 1 (CPU bound):\n");
 
-  if ((pid1 = fork()) == 0) {
+  pid1 = fork();
+  if (pid1 == 0) {
     stride(getpid(), STRIDE_NUM_1);
 
     for (i = 0; i < CPU_RUNS; i++) {

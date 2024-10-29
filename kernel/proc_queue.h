@@ -63,6 +63,18 @@ int dequeue() {
     return head_next;
 }
 
+int top() {
+    int head_next;
+
+    head_next = qtable[QUEUE_HEAD].next;
+
+    if (head_next < 0 || NPROC <= head_next) {
+        return -1;
+    }
+
+    return head_next;
+}
+
 // =======================================
 // End code for process queue
 // =======================================
