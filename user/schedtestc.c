@@ -8,6 +8,7 @@
 #define STRIDE_NUM_1 4
 #define STRIDE_NUM_2 12
 
+// I wanted to double check my queue data structure
 void queuetest() {
   printf("Test 0 (Process queue tests):\n");
   process_queue_init();
