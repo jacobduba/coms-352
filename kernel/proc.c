@@ -156,7 +156,7 @@ found:
 // including user pages.
 // p->lock must be held.
 static void freeproc(struct proc *p) {
-    printf("%d freed\n", p->pid);
+    // printf("%d freed\n", p->pid);
 
   if (p->trapframe)
     kfree((void *)p->trapframe);
@@ -565,7 +565,7 @@ void yield(void) {
       }
   }
 
-  printf("Proc %d yielded\n", p->pid);
+  // printf("Proc %d yielded\n", p->pid);
   p->runtime++;
   sched();
   release(&p->lock);

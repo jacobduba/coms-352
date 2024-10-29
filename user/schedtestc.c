@@ -41,10 +41,11 @@ void cpu_bound_test() {
     stride(getpid(), STRIDE_NUM_1);
 
     for (i = 0; i < CPU_RUNS; i++) {
+        if (i % (CPU_RUNS / 5) == 0) {
+            printf("Stride %d process: runtime reached %d ticks.\n", STRIDE_NUM_1,
+                   getruntime(getpid()));
+        }
     }
-
-    printf("Stride %d process: runtime of %d ticks.\n", STRIDE_NUM_1,
-           getruntime(getpid()));
 
     exit(0);
   }
@@ -53,11 +54,11 @@ void cpu_bound_test() {
     stride(getpid(), STRIDE_NUM_2);
 
     for (i = 0; i < CPU_RUNS; i++) {
+        if (i % (CPU_RUNS / 5) == 0) {
+            printf("Stride %d process: runtime reached %d ticks.\n", STRIDE_NUM_2,
+                   getruntime(getpid()));
+        }
     }
-
-    printf("Stride %d process: runtime of %d ticks.\n", STRIDE_NUM_2,
-           getruntime(getpid()));
-
     exit(0);
   }
 
@@ -78,7 +79,7 @@ void io_bound_test() {
     for (i = 0; i < CPU_RUNS; i++) {
     }
 
-    printf("Stride %d process: runtime of %d ticks.\n", STRIDE_NUM_1,
+    printf("Stride %d process: runtime ended at %d ticks.\n", STRIDE_NUM_1,
            getruntime(getpid()));
 
     exit(0);
@@ -93,7 +94,7 @@ void io_bound_test() {
       sleep(1);
     }
 
-    printf("Stride %d process: runtime of %d ticks.\n", STRIDE_NUM_2,
+    printf("Stride %d process: runtime ended at %d ticks.\n", STRIDE_NUM_2,
            getruntime(getpid()));
 
     exit(0);
