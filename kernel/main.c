@@ -48,6 +48,8 @@ main()
     case 2:
         scheduler_rr();
         break;
+    case 3:
+        scheduler_stride();
+        break;
   }
-  scheduler();
 }
