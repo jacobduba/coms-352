@@ -28,19 +28,14 @@ extern char trampoline[]; // trampoline.S
 // must be acquired before any p->lock.
 struct spinlock wait_lock;
 
-// Null time interrupt pointer
-struct proc *timer_interrupt_proc = 0;
-
 void set_runnable(struct proc *p) {
   p->state = RUNNABLE;
+  // Reset remaining quantum when we readd to queue
+  p->remaining_quantum = 2;
   // printf("%d", p->runtime);
-  if (SCHEDULER == 2) {
-      uint64 pindex = p - proc;
-      // printf("enqueue");
-      enqueue(pindex);
-      // reset timer interrupt proc
-      timer_interrupt_proc = 0;
-  }
+  uint64 pindex = p - proc;
+  // printf("enqueue");
+  enqueue(pindex);
 }
 
 // Allocate a page for each process's kernel stack.
@@ -156,7 +151,7 @@ found:
 // including user pages.
 // p->lock must be held.
 static void freeproc(struct proc *p) {
-    // printf("%d freed\n", p->pid);
+  // printf("%d freed\n", p->pid);
 
   if (p->trapframe)
     kfree((void *)p->trapframe);
@@ -174,6 +169,7 @@ static void freeproc(struct proc *p) {
   p->state = UNUSED;
   p->runtime = 0;
   p->stride = 0;
+  p->remaining_quantum = 2;
 }
 
 // Create a user page table for a given process, with no user memory,
@@ -479,20 +475,16 @@ void scheduler_rr() {
     // processes are waiting.
     intr_on();
 
-    if (timer_interrupt_proc != 0 && timer_interrupt_proc->state != ZOMBIE) {
-        p = timer_interrupt_proc;
-    } else {
-        pindex = dequeue();
+    pindex = dequeue();
 
-        if (pindex < 0) {
-          // nothing to run; stop running on this core until an interrupt.
-          intr_on();
-          asm volatile("wfi");
-          continue;
-        }
-
-        p = proc + pindex;
+    if (pindex < 0) {
+      // nothing to run; stop running on this core until an interrupt.
+      intr_on();
+      asm volatile("wfi");
+      continue;
     }
+
+    p = proc + pindex;
 
     acquire(&p->lock);
 
@@ -550,23 +542,9 @@ void yield(void) {
   // so, here is logic for timer interrupts
   // which is different than any other interrupt
 
-  if (SCHEDULER == 1) {
-      set_runnable(p);
-  }
-
-  if (SCHEDULER == 2) {
-      if (timer_interrupt_proc != 0) {
-        // reset timer_interrupt_proc, add to queue
-        set_runnable(p);
-      } else {
-        // if hasn't ran a tick, exists
-        p->state = RUNNABLE;
-        timer_interrupt_proc = p;
-      }
-  }
+  set_runnable(p);
 
   // printf("Proc %d yielded\n", p->pid);
-  p->runtime++;
   sched();
   release(&p->lock);
 }

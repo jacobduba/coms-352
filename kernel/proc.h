@@ -105,5 +105,6 @@ struct proc {
   char name[16];               // Process name (debugging)
 
   int runtime;
+  uint8 remaining_quantum;
   int stride;
 };
