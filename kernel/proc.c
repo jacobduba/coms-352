@@ -30,12 +30,17 @@ struct spinlock wait_lock;
 
 void set_runnable(struct proc *p) {
   p->state = RUNNABLE;
-  // Reset remaining quantum when we readd to queue
-  p->remaining_quantum = 2;
-  // printf("%d", p->runtime);
-  uint64 pindex = p - proc;
-  // printf("enqueue");
-  enqueue(pindex);
+  // RR scheduler adds to queue as FIFO, messes with time quanta
+  if (SCHEDULER == 2) {
+    // Reset remaining quantum when we readd to queue
+    p->remaining_quantum = 2;
+    uint64 pindex = p - proc;
+    enqueue(pindex);
+  } else if (SCHEDULER == 3) {
+    uint64 pindex = p - proc;
+    p->pass += p->stride;
+    insert(pindex, p->pass);
+  }
 }
 
 // Allocate a page for each process's kernel stack.
@@ -168,8 +173,11 @@ static void freeproc(struct proc *p) {
   p->xstate = 0;
   p->state = UNUSED;
   p->runtime = 0;
-  p->stride = 0;
+  // Good default for stride
+  p->stride = 10;
   p->remaining_quantum = 2;
+  // TODO lol
+  p->pass = 0;
 }
 
 // Create a user page table for a given process, with no user memory,
@@ -505,6 +513,43 @@ void scheduler_rr() {
 
 void scheduler_stride() {
   for (;;) {
+    int pindex;
+    struct proc *p;
+    struct cpu *c = mycpu();
+
+    c->proc = 0;
+    for (;;) {
+        // The most recent process to run may have had interrupts
+        // turned off; enable them to avoid a deadlock if all
+        // processes are waiting.
+        intr_on();
+
+        pindex = dequeue();
+
+        if (pindex < 0) {
+            // nothing to run; stop running on this core until an interrupt.
+            intr_on();
+            asm volatile("wfi");
+            continue;
+        }
+
+        p = proc + pindex;
+
+        acquire(&p->lock);
+
+        // Switch to chosen process.  It is the process's job
+        // to release its lock and then reacquire it
+        // before jumping back to us.
+        p->state = RUNNING;
+        c->proc = p;
+
+        swtch(&c->context, &p->context);
+
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+        release(&p->lock);
+    }
   }
 }
 

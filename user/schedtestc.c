@@ -28,8 +28,19 @@ void queuetest() {
   printf("%d\n", dequeue());
   printf("%d\n", dequeue());
   printf("%d\n", dequeue());
+  insert(1, 1);
+  insert(4, 4);
+  insert(0, 0);
+  insert(10, 10);
+  insert(5, 5);
+  printf("%d\n", dequeue());
+  printf("%d\n", dequeue());
+  printf("%d\n", dequeue());
+  insert(1, 1);
+  printf("%d\n", dequeue());
+  printf("%d\n", dequeue());
+  printf("%d\n", dequeue());
 }
-
 
 void cpu_bound_test() {
   int pid1, pid2, i;
@@ -41,10 +52,10 @@ void cpu_bound_test() {
     stride(getpid(), STRIDE_NUM_1);
 
     for (i = 0; i < CPU_RUNS; i++) {
-        if (i % (CPU_RUNS / 5) == 0) {
-            printf("Stride %d process: runtime reached %d ticks.\n", STRIDE_NUM_1,
-                   getruntime(getpid()));
-        }
+      if (i % (CPU_RUNS / 5) == 0) {
+        printf("Stride %d process: runtime reached %d ticks.\n", STRIDE_NUM_1,
+               getruntime(getpid()));
+      }
     }
 
     exit(0);
@@ -54,10 +65,10 @@ void cpu_bound_test() {
     stride(getpid(), STRIDE_NUM_2);
 
     for (i = 0; i < CPU_RUNS; i++) {
-        if (i % (CPU_RUNS / 5) == 0) {
-            printf("Stride %d process: runtime reached %d ticks.\n", STRIDE_NUM_2,
-                   getruntime(getpid()));
-        }
+      if (i % (CPU_RUNS / 5) == 0) {
+        printf("Stride %d process: runtime reached %d ticks.\n", STRIDE_NUM_2,
+               getruntime(getpid()));
+      }
     }
     exit(0);
   }
@@ -105,7 +116,7 @@ void io_bound_test() {
 }
 
 int main(int argc, char *args[]) {
-  queuetest();
+  // queuetest();
   cpu_bound_test();
   io_bound_test();
   exit(0);

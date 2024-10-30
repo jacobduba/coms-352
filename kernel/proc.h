@@ -104,8 +104,9 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 
-  int runtime;
+  uint64 runtime;
   // this helps use with ticks
   uint8 remaining_quantum;
-  int stride;
+  uint8 stride;
+  uint64 pass;
 };

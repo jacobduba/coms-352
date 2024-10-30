@@ -23,19 +23,19 @@ void process_queue_init() {
     qtable[QUEUE_TAIL].next = EMPTY;
 }
 
-int enqueue(int pid) {
+int enqueue(int pindex) {
     int prev;
 
-    if (pid < 0 || NPROC <= pid) {
+    if (pindex < 0 || NPROC <= pindex) {
         return -1;
     }
 
     prev = qtable[QUEUE_TAIL].prev;
 
-    qtable[pid].next = QUEUE_TAIL;
-    qtable[pid].prev = prev;
-    qtable[prev].next = pid;
-    qtable[QUEUE_TAIL].prev = pid;
+    qtable[pindex].next = QUEUE_TAIL;
+    qtable[pindex].prev = prev;
+    qtable[prev].next = pindex;
+    qtable[QUEUE_TAIL].prev = pindex;
 
     return 0;
 }
@@ -61,6 +61,29 @@ int dequeue() {
 
     // return PID
     return head_next;
+}
+
+int insert(int pindex, int pass) {
+    int curr, prev;
+
+    if (pindex < 0 || NPROC <= pindex) {
+        return -1;
+    }
+
+    curr = qtable[QUEUE_HEAD].next;
+    while (qtable[curr].pass <= pass) {
+        curr = qtable[curr].next;
+    }
+
+    prev = qtable[curr].prev;
+
+    qtable[pindex].next = curr;
+    qtable[pindex].prev = prev;
+    qtable[pindex].pass = pass;
+    qtable[prev].next = pindex;
+    qtable[curr].prev = pindex;
+
+    return 0;
 }
 
 // =======================================
