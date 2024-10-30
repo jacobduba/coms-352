@@ -544,7 +544,7 @@ void yield(void) {
 
   set_runnable(p);
 
-  // printf("Proc %d yielded\n", p->pid);
+  // printf("Proc %d yielded at runtime %d\n", p->pid, p->runtime);
   sched();
   release(&p->lock);
 }

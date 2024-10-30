@@ -80,6 +80,10 @@ usertrap(void)
   if(which_dev == 2) {
     p->runtime++;
 
+    // Other schedulers immidiately yield on preemption.
+    if (SCHEDULER == 1 || SCHEDULER == 3) {
+        yield();
+    }
     // RR scheduler lets CPU bound processes run for two ticks
     if (SCHEDULER == 2 && --p->remaining_quantum == 0) {
         yield();
