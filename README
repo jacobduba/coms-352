@@ -1,4 +1,108 @@
-This is my work for programming assignments in COMS 352 at Iowa State.
+These are my programming assignments for COMS 352 (Operating Systems) at Iowa State.
+
+=============================================================
+Changes
+=============================================================
+
+Files added:
+- user/schedtestc.c
+    - Testing! Run with schedtestc in the shell.
+- kernel/proc_queue.h
+    - The queue detailed in section 3.3
+    - Being in a seperate file lets me test it easier.
+Files changed:
+- param.h
+    - Added SCHEDULER const as detailed in assignment.
+- trap.c
+    - Modified usertrap to increment runtime on timer interrupt.
+    - For stride, always yields.
+    - For RR, only yields after two consecutive timer interupts.
+        - I added a property to proc, remaining_quanta to track this.
+- sysproc.c
+    - Functions to read from userland for stride, getruntime.
+- proc.h
+    - Added runtime, stride, pass values as detailed in the assignment
+    - Added my own remaining_quanta to track time quanta for RR.
+- proc.c
+    - Functions to set stride, get runtime.
+    - New set runnable function called whenever
+      proc->status = RUNNABLE  would've been called.
+        - For RR and stride, enqueues process to process queue
+    - scheduler_stride and scheduler_rr functions
+        - I believe they are identical since they only dequeue and
+          the difference in queue behavior only happens with
+          enqueueing.
+    - Modified alloc proc to set the lowest stride.
+    - Modified freeproc to initialize new values
+- main.c
+    - Calls different stride schedulers based on the scheduler type.
+- user.h
+    - Added system call declarations.
+- usys.pl
+    - Added code to generate assembly.
+- syscall.h
+    - Added constants to identify system call.
+
+=============================================================
+Interrepting the tests!
+=============================================================
+
+The first test has a condition that checks if the process has
+made it a fifth of the way and prints the runtime. That extra
+computation means the process takes longer to complete than the CPU
+bound process in test 2. Success looks like the two strides reaching
+milestones evenly in RR and proportional to their stride in the
+stride scheduler.
+
+The second test has one test iterating through a loop (not checking
+the progress so it takes many less ticks) and one test iterating
+through 12 sleep(1) calls. When the processes finish the runtimes
+are printed. The I/O bound process should finish later but with no
+ticks.
+
+```
+===============================
+Using round robin scheduler
+===============================
+Test 1 (CPU bound):
+Stride 4 process: runtime reached 0 ticks.
+Stride 12 process: runtime reached 0 ticks.
+Stride 4 process: runtime reached 11 ticks.
+Stride 12 process: runtime reached 10 ticks.
+Stride 12 process: runtime reached 21 ticks.
+Stride 4 process: runtime reached 22 ticks.
+Stride 4 process: runtime reached 32 ticks.
+Stride 12 process: runtime reached 32 ticks.
+Stride 4 process: runtime reached 43 ticks.
+Stride 12 process: runtime reached 43 ticks.
+Stride 4 process: runtime reached 54 ticks.
+Stride 12 process: runtime reached 54 ticks.
+Test 2 (IO Bound):
+Stride 4 process: runtime ended at 12 ticks.
+Stride 12 process: runtime ended at 0 ticks.
+```
+
+```
+===============================
+Using stride scheduler
+===============================
+Test 1 (CPU bound):
+Stride 4 process: runtime reached 0 ticks.
+Stride 12 process: runtime reached 0 ticks.
+Stride 4 process: runtime reached 10 ticks.
+Stride 4 process: runtime reached 20 ticks.
+Stride 12 process: runtime reached 10 ticks.
+Stride 4 process: runtime reached 31 ticks.
+Stride 4 process: runtime reached 42 ticks.
+Stride 4 process: runtime reached 53 ticks.
+Stride 12 process: runtime reached 22 ticks.
+Stride 12 process: runtime reached 32 ticks.
+Stride 12 process: runtime reached 43 ticks.
+Stride 12 process: runtime reached 54 ticks.
+Test 2 (IO Bound):
+Stride 4 process: runtime ended at 12 ticks.
+Stride 12 process: runtime ended at 0 ticks.
+```
 
 ======================================================================
 

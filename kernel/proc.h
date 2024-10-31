@@ -104,8 +104,10 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 
+  // My custom proc properties
   uint64 runtime;
-  // this helps use with ticks
+  // keeps track of time quantum for RR
+  // Is set to 2, decremented by one and checked for zero
   uint8 remaining_quantum;
   uint8 stride;
   uint64 pass;

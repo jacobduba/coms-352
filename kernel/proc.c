@@ -149,6 +149,24 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  if (SCHEDULER == 3) {
+    // 3.7.2 — set proc to the current lowest pass
+    int lowest_pass = 2147483647;
+    for (struct proc *l = proc; l < &proc[NPROC]; l++) {
+      if (l->state == RUNNABLE || l->state == RUNNING || l->state == SLEEPING) {
+        if (l->pass < lowest_pass) {
+          lowest_pass = l->pass;
+        }
+      }
+    }
+
+    if (lowest_pass == 2147483647)
+      lowest_pass = 0;
+
+    p-> pass = lowest_pass;
+    // end 3.7.2
+  }
+
   return p;
 }
 

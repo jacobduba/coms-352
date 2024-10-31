@@ -1,5 +1,5 @@
 #include "kernel/types.h"
-#define NPROC 20
+#include "kernel/param.h"
 #include "kernel/proc_queue.h"
 #include "user/user.h"
 
@@ -116,6 +116,17 @@ void io_bound_test() {
 }
 
 int main(int argc, char *args[]) {
+  printf("===============================\n");
+  if (SCHEDULER == 2) {
+    printf("Using round robin scheduler\n");
+  } else if (SCHEDULER == 3) {
+    printf("Using stride scheduler\n");
+  } else if (SCHEDULER == 1) {
+    printf("Using default scheduler...:\n");
+    printf("Why are you testing this lol?");
+  }
+  printf("===============================\n");
+
   // queuetest();
   cpu_bound_test();
   io_bound_test();
