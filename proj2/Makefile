@@ -1,6 +1,6 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -Wall -Wextra -pthread
+CFLAGS = -Wall -Wextra -pthread -g
 
 # Source files and target
 SRC = encrypt-driver.c encrypt-module.c
