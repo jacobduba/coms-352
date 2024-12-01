@@ -25,10 +25,29 @@ pthread_t input_counter_thread;
 pthread_t encrypt_thread;
 pthread_t output_counter_thread;
 pthread_t output_thread;
+// Lock for the entire input counter thread
+pthread_mutex_t input_counter_lock;
+// Lock for just the count_output_function
+pthread_mutex_t count_output_lock;
+pthread_mutex_t count_output_changed;
 
-void reset_requested() { log_counts(); }
+// This function freezes the input_counter thread
+// Then waits until get_input_total_count() == get_output_total_count()
+void reset_requested() {
+  pthread_mutex_lock(&input_counter_lock);
 
-void reset_finished() {}
+  pthread_mutex_lock(&count_output_lock);
+  // input AND output are locked here --- no race condition.
+  while (get_input_total_count() != get_output_total_count())
+    pthread_cond_wait(&count_output_changed, &count_output_lock);
+
+  log_counts();
+}
+
+void reset_finished() {
+  pthread_mutex_unlock(&input_counter_lock);
+  pthread_mutex_unlock(&count_output_lock);
+}
 
 void *input_thread_fun() {
   buffer_slot_t *b;
@@ -57,6 +76,7 @@ void *input_counter_thread_fun() {
   int i;
 
   for (i = 0;; i = (i + 1) % input_buffer_size) {
+    pthread_mutex_lock(&input_counter_lock);
     b = &input_buffer[i];
 
     pthread_mutex_lock(&b->lock);
@@ -70,6 +90,7 @@ void *input_counter_thread_fun() {
     count_input(c);
 
     if (c == EOF) return 0;
+    pthread_mutex_unlock(&input_counter_lock);
   }
 }
 
@@ -126,7 +147,10 @@ void *output_counter_thread_fun() {
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[COUNTED]);
 
+    pthread_mutex_lock(&count_output_lock);
     count_output(c);
+    pthread_mutex_unlock(&count_output_lock);
+    pthread_cond_signal(&count_output_changed);
 
     if (c == EOF) return 0;
   }
@@ -196,6 +220,10 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < NUM_FLAGS; i++)
       pthread_cond_init(&input_buffer[i].status_set_to[i], NULL);
   }
+
+  pthread_mutex_init(&input_counter_lock, NULL);
+  pthread_mutex_init(&count_output_lock, NULL);
+  pthread_cond_init(&count_output_changed, NULL);
 
   init(argv[1], argv[2], argv[3]);
 
