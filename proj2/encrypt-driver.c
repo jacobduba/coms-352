@@ -62,6 +62,7 @@ void *input_thread_fun() {
     while (b->status != EMPTY)
       pthread_cond_wait(&b->status_set_to[EMPTY], &b->lock);
     b->data = c;
+    printf("Input thread: %c\n", c);
     b->status = UNCOUNTED;
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[UNCOUNTED]);
@@ -83,13 +84,16 @@ void *input_counter_thread_fun() {
     while (b->status != UNCOUNTED)
       pthread_cond_wait(&b->status_set_to[UNCOUNTED], &b->lock);
     c = b->data;
+    printf("Input counter thread: %c\n", c);
     b->status = COUNTED;
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[COUNTED]);
 
-    count_input(c);
+    if (c == EOF)
+      return 0;
+    else
+      count_input(c);
 
-    if (c == EOF) return 0;
     pthread_mutex_unlock(&input_counter_lock);
   }
 }
@@ -113,6 +117,7 @@ void *encrypt_thread_fun() {
 
     i = (i + 1) % input_buffer_size;
 
+    printf("Encrypt thread: %c\n", c);
     if (c != EOF) c = encrypt(c);
 
     ob = &output_buffer[j];
@@ -143,16 +148,19 @@ void *output_counter_thread_fun() {
     while (b->status != UNCOUNTED)
       pthread_cond_wait(&b->status_set_to[UNCOUNTED], &b->lock);
     c = b->data;
+    printf("Output counter thread: %c\n", c);
     b->status = COUNTED;
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[COUNTED]);
 
-    pthread_mutex_lock(&count_output_lock);
-    count_output(c);
-    pthread_mutex_unlock(&count_output_lock);
-    pthread_cond_signal(&count_output_changed);
-
-    if (c == EOF) return 0;
+    if (c == EOF) {
+      return 0;
+    } else {
+      pthread_mutex_lock(&count_output_lock);
+      count_output(c);
+      pthread_mutex_unlock(&count_output_lock);
+      pthread_cond_signal(&count_output_changed);
+    }
   }
 }
 
@@ -168,6 +176,7 @@ void *output_thread_fun() {
     while (b->status != COUNTED)
       pthread_cond_wait(&b->status_set_to[COUNTED], &b->lock);
     c = b->data;
+    printf("Output thread: %c\n", c);
     b->status = EMPTY;
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[EMPTY]);
