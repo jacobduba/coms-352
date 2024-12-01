@@ -89,10 +89,9 @@ void *input_counter_thread_fun() {
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[COUNTED]);
 
-    if (c == EOF)
-      return 0;
-    else
-      count_input(c);
+    if (c == EOF) return 0;
+
+    count_input(c);
 
     pthread_mutex_unlock(&input_counter_lock);
   }
@@ -153,14 +152,12 @@ void *output_counter_thread_fun() {
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[COUNTED]);
 
-    if (c == EOF) {
-      return 0;
-    } else {
-      pthread_mutex_lock(&count_output_lock);
-      count_output(c);
-      pthread_mutex_unlock(&count_output_lock);
-      pthread_cond_signal(&count_output_changed);
-    }
+    if (c == EOF) return 0;
+
+    pthread_mutex_lock(&count_output_lock);
+    count_output(c);
+    pthread_mutex_unlock(&count_output_lock);
+    pthread_cond_signal(&count_output_changed);
   }
 }
 
