@@ -44,11 +44,10 @@ void *input_thread_fun() {
       pthread_cond_wait(&b->status_set_to[EMPTY], &b->lock);
     b->data = c;
     b->status = UNCOUNTED;
-    printf("Input thread: %c\n", c);
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[UNCOUNTED]);
 
-    if (c == EOF) return;
+    if (c == EOF) return 0;
   }
 }
 
@@ -65,13 +64,12 @@ void *input_counter_thread_fun() {
       pthread_cond_wait(&b->status_set_to[UNCOUNTED], &b->lock);
     c = b->data;
     b->status = COUNTED;
-    printf("Input counter thread: %c\n", c);
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[COUNTED]);
 
     count_input(c);
 
-    if (c == EOF) return;
+    if (c == EOF) return 0;
   }
 }
 
@@ -96,8 +94,6 @@ void *encrypt_thread_fun() {
 
     if (c != EOF) c = encrypt(c);
 
-    printf("Encrypt thread: %c\n", c);
-
     ob = &output_buffer[j];
 
     pthread_mutex_lock(&ob->lock);
@@ -110,14 +106,14 @@ void *encrypt_thread_fun() {
 
     j = (j + 1) % output_buffer_size;
 
-    if (c == EOF) return;
+    if (c == EOF) return 0;
   }
 }
 
 void *output_counter_thread_fun() {
   buffer_slot_t *b;
   char c;
-  int i, j;
+  int i;
 
   for (i = 0;; i = (i + 1) % output_buffer_size) {
     b = &output_buffer[i];
@@ -127,20 +123,19 @@ void *output_counter_thread_fun() {
       pthread_cond_wait(&b->status_set_to[UNCOUNTED], &b->lock);
     c = b->data;
     b->status = COUNTED;
-    printf("Output counter thread: %c\n", c);
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[COUNTED]);
 
     count_output(c);
 
-    if (c == EOF) return;
+    if (c == EOF) return 0;
   }
 }
 
 void *output_thread_fun() {
   buffer_slot_t *b;
   char c;
-  int i, j;
+  int i;
 
   for (i = 0;; i = (i + 1) % output_buffer_size) {
     b = &output_buffer[i];
@@ -150,19 +145,16 @@ void *output_thread_fun() {
       pthread_cond_wait(&b->status_set_to[COUNTED], &b->lock);
     c = b->data;
     b->status = EMPTY;
-    printf("Output thread: %c\n", c);
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[EMPTY]);
 
-    if (c == EOF) return;
+    if (c == EOF) return 0;
 
     write_output(c);
   }
 }
 
 int main(int argc, char *argv[]) {
-  char c;
-
   if (argc != 4) {
     printf(
         "Error: incorrect number of params.\nUsage: ./encrypt <input> "
