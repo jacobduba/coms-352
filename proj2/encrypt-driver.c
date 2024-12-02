@@ -29,7 +29,7 @@ pthread_t output_thread;
 pthread_mutex_t input_counter_lock;
 // Lock for just the count_output_function
 pthread_mutex_t count_output_lock;
-pthread_mutex_t count_output_changed;
+pthread_cond_t count_output_changed;
 
 // This function freezes the input_counter thread
 // Then waits until get_input_total_count() == get_output_total_count()
@@ -62,7 +62,7 @@ void *input_thread_fun() {
     while (b->status != EMPTY)
       pthread_cond_wait(&b->status_set_to[EMPTY], &b->lock);
     b->data = c;
-    printf("Input thread: %c\n", c);
+    // printf("Input thread: %c\n", c);
     b->status = UNCOUNTED;
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[UNCOUNTED]);
@@ -84,7 +84,7 @@ void *input_counter_thread_fun() {
     while (b->status != UNCOUNTED)
       pthread_cond_wait(&b->status_set_to[UNCOUNTED], &b->lock);
     c = b->data;
-    printf("Input counter thread: %c\n", c);
+    // printf("Input counter thread: %c\n", c);
     b->status = COUNTED;
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[COUNTED]);
@@ -116,7 +116,7 @@ void *encrypt_thread_fun() {
 
     i = (i + 1) % input_buffer_size;
 
-    printf("Encrypt thread: %c\n", c);
+    // printf("Encrypt thread: %c\n", c);
     if (c != EOF) c = encrypt(c);
 
     ob = &output_buffer[j];
@@ -147,7 +147,7 @@ void *output_counter_thread_fun() {
     while (b->status != UNCOUNTED)
       pthread_cond_wait(&b->status_set_to[UNCOUNTED], &b->lock);
     c = b->data;
-    printf("Output counter thread: %c\n", c);
+    // printf("Output counter thread: %c\n", c);
     b->status = COUNTED;
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[COUNTED]);
@@ -173,7 +173,7 @@ void *output_thread_fun() {
     while (b->status != COUNTED)
       pthread_cond_wait(&b->status_set_to[COUNTED], &b->lock);
     c = b->data;
-    printf("Output thread: %c\n", c);
+    // printf("Output thread: %c\n", c);
     b->status = EMPTY;
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[EMPTY]);
