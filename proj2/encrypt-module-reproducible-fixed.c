@@ -42,7 +42,7 @@ void *not_random_reset() {
 	}
 }
 
-void init(char *inputFileName, char *outputFileName) {
+void init(char *inputFileName, char *outputFileName, char *logFileName) {
 	pthread_t pid;
 	sem_char_read = sem_open("/sem_char_read", O_CREAT, 0644, 0);
 	sem_unlink("/sem_char_read");
@@ -61,7 +61,7 @@ void write_output(int c) {
 	fputc(c, output_file);
 }
 
-int caesar_encrypt(int c) {
+int encrypt(int c) {
 	if (c >= 'a' && c <= 'z') {
 		c += key;
 		if (c > 'z') {

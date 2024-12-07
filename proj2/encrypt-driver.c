@@ -25,8 +25,10 @@ pthread_t input_counter_thread;
 pthread_t encrypt_thread;
 pthread_t output_counter_thread;
 pthread_t output_thread;
-// Lock for the entire input counter thread
-pthread_mutex_t input_counter_lock;
+// Boolean val for if input counter should stop for reset
+int ic_reset;
+pthread_mutex_t ic_reset_lock;
+pthread_cond_t ic_reset_changed;
 // Lock for just the count_output_function
 pthread_mutex_t count_output_lock;
 pthread_cond_t count_output_changed;
@@ -34,7 +36,9 @@ pthread_cond_t count_output_changed;
 // This function freezes the input_counter thread
 // Then waits until get_input_total_count() == get_output_total_count()
 void reset_requested() {
-  pthread_mutex_lock(&input_counter_lock);
+  pthread_mutex_lock(&ic_reset_lock);
+  ic_reset = 1;
+  pthread_mutex_unlock(&ic_reset_lock);
 
   pthread_mutex_lock(&count_output_lock);
   // input AND output are locked here --- no race condition.
@@ -45,7 +49,10 @@ void reset_requested() {
 }
 
 void reset_finished() {
-  pthread_mutex_unlock(&input_counter_lock);
+  pthread_mutex_lock(&ic_reset_lock);
+  ic_reset = 0;
+  pthread_cond_signal(&ic_reset_changed);
+  pthread_mutex_unlock(&ic_reset_lock);
   pthread_mutex_unlock(&count_output_lock);
 }
 
@@ -77,7 +84,9 @@ void *input_counter_thread_fun() {
   int i;
 
   for (i = 0;; i = (i + 1) % input_buffer_size) {
-    pthread_mutex_lock(&input_counter_lock);
+    pthread_mutex_lock(&ic_reset_lock);
+    while (ic_reset) pthread_cond_wait(&ic_reset_changed, &ic_reset_lock);
+    pthread_mutex_unlock(&ic_reset_lock);
     b = &input_buffer[i];
 
     pthread_mutex_lock(&b->lock);
@@ -92,8 +101,6 @@ void *input_counter_thread_fun() {
     if (c == EOF) return 0;
 
     count_input(c);
-
-    pthread_mutex_unlock(&input_counter_lock);
   }
 }
 
@@ -227,7 +234,9 @@ int main(int argc, char *argv[]) {
       pthread_cond_init(&input_buffer[i].status_set_to[i], NULL);
   }
 
-  pthread_mutex_init(&input_counter_lock, NULL);
+  ic_reset = 0;
+  pthread_mutex_init(&ic_reset_lock, NULL);
+  pthread_cond_init(&ic_reset_changed, NULL);
   pthread_mutex_init(&count_output_lock, NULL);
   pthread_cond_init(&count_output_changed, NULL);
 
