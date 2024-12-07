@@ -30,8 +30,9 @@ int ic_reset;
 pthread_mutex_t ic_reset_lock;
 pthread_cond_t ic_reset_changed;
 // Lock for just the count_output_function
-pthread_mutex_t count_output_lock;
-pthread_cond_t count_output_changed;
+int oc_reset;
+pthread_mutex_t oc_reset_lock;
+pthread_cond_t oc_reset_changed;
 
 // This function freezes the input_counter thread
 // Then waits until get_input_total_count() == get_output_total_count()
@@ -42,26 +43,37 @@ void reset_requested() {
   pthread_mutex_unlock(&ic_reset_lock);
 
   printf("reset_request 2\n");
-  pthread_mutex_lock(&count_output_lock);
-  // input AND output are locked here --- no race condition.
-  while (get_input_total_count() != get_output_total_count()) {
-    printf("Start cond wait itc: %d otc %d\n", get_input_total_count(),
+  pthread_mutex_lock(&oc_reset_lock);
+  while (!oc_reset) {
+    printf("reset_request 3, itc: %d otc %d\n", get_input_total_count(),
            get_output_total_count());
-    pthread_cond_wait(&count_output_changed, &count_output_lock);
+    pthread_cond_wait(&oc_reset_changed, &oc_reset_lock);
   }
-  printf("reset_request 3\n");
+  pthread_mutex_unlock(&oc_reset_lock);
+  // input AND output are locked here --- no race condition.
+  // while (get_input_total_count() != get_output_total_count()) {
+  //   printf("Start cond wait itc: %d otc %d\n", get_input_total_count(),
+  //          get_output_total_count());
+  //   pthread_cond_wait(&count_output_changed, &oc_reset_lock);
+  // }
+  printf("reset_request 4\n");
 
-  log_counts();
+  // log_counts();
 }
 
 void reset_finished() {
+  printf("reset_finished 1\n");
   // printf("Reset finished start\n");
   pthread_mutex_lock(&ic_reset_lock);
   ic_reset = 0;
   pthread_mutex_unlock(&ic_reset_lock);
   pthread_cond_signal(&ic_reset_changed);
-  pthread_mutex_unlock(&count_output_lock);
   // printf("Reset finished end (ic_reset: %d)\n", ic_reset);
+  pthread_mutex_lock(&oc_reset_lock);
+  oc_reset = 0;
+  pthread_mutex_unlock(&oc_reset_lock);
+  pthread_cond_signal(&oc_reset_changed);
+  printf("reset_finished 2\n");
 }
 
 void *input_thread_fun() {
@@ -94,9 +106,9 @@ void *input_counter_thread_fun() {
   for (i = 0;; i = (i + 1) % input_buffer_size) {
     pthread_mutex_lock(&ic_reset_lock);
     while (ic_reset) {
-      printf("ic_reset_changed started (ic_reset: %d)\n", ic_reset);
+      printf("input_counter 1 (ic_reset: %d)\n", ic_reset);
       pthread_cond_wait(&ic_reset_changed, &ic_reset_lock);
-      printf("ic_reset_changed ended (ic_reset: %d)\n", ic_reset);
+      printf("input_counter 2 (ic_reset: %d)\n", ic_reset);
     }
     pthread_mutex_unlock(&ic_reset_lock);
     b = &input_buffer[i];
@@ -160,6 +172,23 @@ void *output_counter_thread_fun() {
   int i;
 
   for (i = 0;; i = (i + 1) % output_buffer_size) {
+    pthread_mutex_lock(&ic_reset_lock);
+    if (ic_reset && get_input_total_count() == get_output_total_count()) {
+      printf("output_counter 1\n");
+      pthread_mutex_lock(&oc_reset_lock);
+      printf("output_counter 2\n");
+      oc_reset = 1;
+      pthread_mutex_unlock(&oc_reset_lock);
+      pthread_cond_signal(&oc_reset_changed);
+    }
+    pthread_mutex_unlock(&ic_reset_lock);
+
+    pthread_mutex_lock(&oc_reset_lock);
+    while (oc_reset) {
+      pthread_cond_wait(&oc_reset_changed, &oc_reset_lock);
+    }
+    pthread_mutex_unlock(&oc_reset_lock);
+
     b = &output_buffer[i];
 
     pthread_mutex_lock(&b->lock);
@@ -173,10 +202,7 @@ void *output_counter_thread_fun() {
 
     if (c == EOF) return 0;
 
-    pthread_mutex_lock(&count_output_lock);
     count_output(c);
-    pthread_mutex_unlock(&count_output_lock);
-    pthread_cond_signal(&count_output_changed);
   }
 }
 
@@ -249,8 +275,9 @@ int main(int argc, char *argv[]) {
   ic_reset = 0;
   pthread_mutex_init(&ic_reset_lock, NULL);
   pthread_cond_init(&ic_reset_changed, NULL);
-  pthread_mutex_init(&count_output_lock, NULL);
-  pthread_cond_init(&count_output_changed, NULL);
+  oc_reset = 0;
+  pthread_mutex_init(&oc_reset_lock, NULL);
+  pthread_cond_init(&oc_reset_changed, NULL);
 
   init(argv[1], argv[2], argv[3]);
 
