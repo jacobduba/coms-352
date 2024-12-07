@@ -36,24 +36,32 @@ pthread_cond_t count_output_changed;
 // This function freezes the input_counter thread
 // Then waits until get_input_total_count() == get_output_total_count()
 void reset_requested() {
+  printf("reset_request 1\n");
   pthread_mutex_lock(&ic_reset_lock);
   ic_reset = 1;
   pthread_mutex_unlock(&ic_reset_lock);
 
+  printf("reset_request 2\n");
   pthread_mutex_lock(&count_output_lock);
   // input AND output are locked here --- no race condition.
-  while (get_input_total_count() != get_output_total_count())
+  while (get_input_total_count() != get_output_total_count()) {
+    printf("Start cond wait itc: %d otc %d\n", get_input_total_count(),
+           get_output_total_count());
     pthread_cond_wait(&count_output_changed, &count_output_lock);
+  }
+  printf("reset_request 3\n");
 
-  // log_counts();
+  log_counts();
 }
 
 void reset_finished() {
+  // printf("Reset finished start\n");
   pthread_mutex_lock(&ic_reset_lock);
   ic_reset = 0;
-  pthread_cond_signal(&ic_reset_changed);
   pthread_mutex_unlock(&ic_reset_lock);
+  pthread_cond_signal(&ic_reset_changed);
   pthread_mutex_unlock(&count_output_lock);
+  // printf("Reset finished end (ic_reset: %d)\n", ic_reset);
 }
 
 void *input_thread_fun() {
@@ -69,7 +77,7 @@ void *input_thread_fun() {
     while (b->status != EMPTY)
       pthread_cond_wait(&b->status_set_to[EMPTY], &b->lock);
     b->data = c;
-    printf("Input thread: %c\n", c);
+    // printf("Input thread: %c\n", c);
     b->status = UNCOUNTED;
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[UNCOUNTED]);
@@ -85,7 +93,11 @@ void *input_counter_thread_fun() {
 
   for (i = 0;; i = (i + 1) % input_buffer_size) {
     pthread_mutex_lock(&ic_reset_lock);
-    while (ic_reset) pthread_cond_wait(&ic_reset_changed, &ic_reset_lock);
+    while (ic_reset) {
+      printf("ic_reset_changed started (ic_reset: %d)\n", ic_reset);
+      pthread_cond_wait(&ic_reset_changed, &ic_reset_lock);
+      printf("ic_reset_changed ended (ic_reset: %d)\n", ic_reset);
+    }
     pthread_mutex_unlock(&ic_reset_lock);
     b = &input_buffer[i];
 
@@ -93,7 +105,7 @@ void *input_counter_thread_fun() {
     while (b->status != UNCOUNTED)
       pthread_cond_wait(&b->status_set_to[UNCOUNTED], &b->lock);
     c = b->data;
-    printf("Input counter thread: %c\n", c);
+    // printf("Input counter thread: %c\n", c);
     b->status = COUNTED;
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[COUNTED]);
@@ -123,7 +135,7 @@ void *encrypt_thread_fun() {
 
     i = (i + 1) % input_buffer_size;
 
-    printf("Encrypt thread: %c\n", c);
+    // printf("Encrypt thread: %c\n", c);
     if (c != EOF) c = encrypt(c);
 
     ob = &output_buffer[j];
@@ -154,7 +166,7 @@ void *output_counter_thread_fun() {
     while (b->status != UNCOUNTED)
       pthread_cond_wait(&b->status_set_to[UNCOUNTED], &b->lock);
     c = b->data;
-    printf("Output counter thread: %c\n", c);
+    // printf("Output counter thread: %c\n", c);
     b->status = COUNTED;
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[COUNTED]);
@@ -180,7 +192,7 @@ void *output_thread_fun() {
     while (b->status != COUNTED)
       pthread_cond_wait(&b->status_set_to[COUNTED], &b->lock);
     c = b->data;
-    printf("Output thread: %c\n", c);
+    // printf("Output thread: %c\n", c);
     b->status = EMPTY;
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[EMPTY]);
@@ -256,7 +268,7 @@ int main(int argc, char *argv[]) {
 
   printf("End of file reached.\n");
 
-  // log_counts();
+  log_counts();
 
   free(input_buffer);
   free(output_buffer);
