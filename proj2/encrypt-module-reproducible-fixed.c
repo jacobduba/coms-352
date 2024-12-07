@@ -14,6 +14,7 @@
 
 FILE *input_file;
 FILE *output_file;
+FILE *log_file;
 int input_counts[256];
 int output_counts[256];
 int input_total_count;
@@ -50,6 +51,23 @@ void init(char *inputFileName, char *outputFileName, char *logFileName) {
   pthread_create(&pid, NULL, &not_random_reset, NULL);
   input_file = fopen(inputFileName, "r");
   output_file = fopen(outputFileName, "w");
+  log_file = fopen(logFileName, "w");
+}
+
+void log_counts() {
+  fprintf(log_file, "Counts using key %d:\n", key);
+  fprintf(log_file, "Total input count: %d\n", input_total_count);
+  fprintf(log_file, "Plaintext frequency counts: [ %d", input_counts[0]);
+  for (int i = 1; i < 256; i++) {
+    fprintf(log_file, ", %d", input_counts[i]);
+  }
+  fprintf(log_file, "]\n");
+  fprintf(log_file, "Total output count: %d\n", output_total_count);
+  fprintf(log_file, "Ciphertext frequency counts: [ %d", output_counts[0]);
+  for (int i = 1; i < 256; i++) {
+    fprintf(log_file, ", %d", output_counts[i]);
+  }
+  fprintf(log_file, "]\n\n");
 }
 
 int read_input() {

@@ -41,13 +41,13 @@ void reset_requested() {
   }
   pthread_mutex_unlock(&is_reset_lock);
 
-  // log_counts();
+  log_counts();
 }
 
 void reset_finished() {
   pthread_mutex_lock(&is_reset_lock);
   is_reset = 0;
-  pthread_cond_broadcast(&reset_continue_cond);
+  pthread_cond_broadcast(&reset_done_cond);
   pthread_mutex_unlock(&is_reset_lock);
 }
 
@@ -79,8 +79,8 @@ void *input_counter_thread_fun() {
   int i;
 
   for (i = 0;; i = (i + 1) % input_buffer_size) {
-    printf("count input, itc: %d otc %d\n", get_input_total_count(),
-           get_output_total_count());
+    // printf("count input itc: %d otc %d\n", get_input_total_count(),
+    //        get_output_total_count());
 
     pthread_mutex_lock(&is_reset_lock);
     while (is_reset) {
@@ -149,8 +149,8 @@ void *output_counter_thread_fun() {
   int i;
 
   for (i = 0;; i = (i + 1) % output_buffer_size) {
-    printf("count output, itc: %d otc %d\n", get_input_total_count(),
-           get_output_total_count());
+    // printf("count output, itc: %d otc %d\n", get_input_total_count(),
+    //        get_output_total_count());
 
     pthread_mutex_lock(&is_reset_lock);
     if (is_reset && get_input_total_count() == get_output_total_count()) {
