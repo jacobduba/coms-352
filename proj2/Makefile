@@ -3,6 +3,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -pthread -g
 
 # Source files and target
+# SRC = encrypt-driver.c encrypt-module-reproducible-fixed.c
 SRC = encrypt-driver.c encrypt-module.c
 TARGET = encrypt
 

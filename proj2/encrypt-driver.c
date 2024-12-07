@@ -45,7 +45,7 @@ void reset_requested() {
   while (get_input_total_count() != get_output_total_count())
     pthread_cond_wait(&count_output_changed, &count_output_lock);
 
-  log_counts();
+  // log_counts();
 }
 
 void reset_finished() {
@@ -69,7 +69,7 @@ void *input_thread_fun() {
     while (b->status != EMPTY)
       pthread_cond_wait(&b->status_set_to[EMPTY], &b->lock);
     b->data = c;
-    // printf("Input thread: %c\n", c);
+    printf("Input thread: %c\n", c);
     b->status = UNCOUNTED;
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[UNCOUNTED]);
@@ -93,7 +93,7 @@ void *input_counter_thread_fun() {
     while (b->status != UNCOUNTED)
       pthread_cond_wait(&b->status_set_to[UNCOUNTED], &b->lock);
     c = b->data;
-    // printf("Input counter thread: %c\n", c);
+    printf("Input counter thread: %c\n", c);
     b->status = COUNTED;
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[COUNTED]);
@@ -123,7 +123,7 @@ void *encrypt_thread_fun() {
 
     i = (i + 1) % input_buffer_size;
 
-    // printf("Encrypt thread: %c\n", c);
+    printf("Encrypt thread: %c\n", c);
     if (c != EOF) c = encrypt(c);
 
     ob = &output_buffer[j];
@@ -154,7 +154,7 @@ void *output_counter_thread_fun() {
     while (b->status != UNCOUNTED)
       pthread_cond_wait(&b->status_set_to[UNCOUNTED], &b->lock);
     c = b->data;
-    // printf("Output counter thread: %c\n", c);
+    printf("Output counter thread: %c\n", c);
     b->status = COUNTED;
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[COUNTED]);
@@ -180,7 +180,7 @@ void *output_thread_fun() {
     while (b->status != COUNTED)
       pthread_cond_wait(&b->status_set_to[COUNTED], &b->lock);
     c = b->data;
-    // printf("Output thread: %c\n", c);
+    printf("Output thread: %c\n", c);
     b->status = EMPTY;
     pthread_mutex_unlock(&b->lock);
     pthread_cond_signal(&b->status_set_to[EMPTY]);
@@ -256,7 +256,7 @@ int main(int argc, char *argv[]) {
 
   printf("End of file reached.\n");
 
-  log_counts();
+  // log_counts();
 
   free(input_buffer);
   free(output_buffer);
