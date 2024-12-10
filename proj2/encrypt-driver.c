@@ -1,3 +1,17 @@
+// Jacob Duba
+
+// This is the encryption driver.
+// Super top down view: each buffer has a char and status.
+
+// Mutual exclusion is handled through a mutex lock and cond whenever the
+// status is changed.
+
+// Resets lock the input counting thread immediately
+// Once the output thread catched up to the input thread (there shouldn't be
+// any data between the output and input threads at this point) it signals back
+// to the reset_requested
+// Reset finished basically just starts the input thread back up.
+
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,30 +20,44 @@
 
 #define CHAR_NULL '\0'
 
+// There are three threads that can access a single buffer cell at a time.
+// EMPTY means the input or encrypt thread can populate.
+// UNCOUNTED means waiting for the counter to reach.
+// COUNTED means the encrypt or output thread can process and set as empty.
 typedef enum { EMPTY, UNCOUNTED, COUNTED } b_status_t;
 #define NUM_FLAGS 3
 
+// Buffers are just arrays of these bad boys
 typedef struct {
   char data;
   b_status_t status;
   pthread_mutex_t lock;
   pthread_cond_t status_set_to[NUM_FLAGS];
 } buffer_slot_t;
+// They are circular using a modulus operation.
+// There are three threads that can
 
 int input_buffer_size, output_buffer_size;
 
+// Dynamically allocated because user sets size
 buffer_slot_t *input_buffer;
 buffer_slot_t *output_buffer;
+
+// Threads
 pthread_t input_thread;
 pthread_t input_counter_thread;
 pthread_t encrypt_thread;
 pthread_t output_counter_thread;
 pthread_t output_thread;
 
+// Input thread pauses when is_reset = 1
 int is_reset;
 pthread_mutex_t is_reset_lock;
-pthread_cond_t reset_done_cond;
+// Condition signals when output thread catches up with input after pause.
 pthread_cond_t reset_continue_cond;
+// Signals that is_reset = 0 to input thread
+// basically starting it up again
+pthread_cond_t reset_done_cond;
 
 // This function freezes the input_counter thread
 // Then waits until get_input_total_count() == get_output_total_count()
@@ -46,6 +74,7 @@ void reset_requested() {
 
 void reset_finished() {
   pthread_mutex_lock(&is_reset_lock);
+  // unblock input thread
   is_reset = 0;
   pthread_cond_broadcast(&reset_done_cond);
   pthread_mutex_unlock(&is_reset_lock);
